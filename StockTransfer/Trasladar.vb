@@ -45,11 +45,14 @@
 
             If oRecSetH1.RecordCount > 0 Then
 
+                oRecSetH1.MoveFirst()
+
                 oStockTransfer.DocDate = DateTime.Now
+                oStockTransfer.FromWarehouse = oRecSetH1.Fields.Item("FromWhsCod").Value
+                oStockTransfer.ToWarehouse = oRecSetH1.Fields.Item("WhsCode").Value
+                oStockTransfer.Comments = "Basado en la solicitud " & DocNum
                 oStockTransfer.ElectronicProtocols.GenerationType = 1
                 oStockTransfer.ElectronicProtocols.Add()
-
-                oRecSetH1.MoveFirst()
 
                 For i = 0 To oRecSetH1.RecordCount - 1
 
@@ -63,9 +66,9 @@
                     Quantity = oRecSetH1.Fields.Item("Quantity").Value
                     Lote = oRecSetH1.Fields.Item("ManBtchNum").Value
 
-                    oStockTransfer.Lines.BaseEntry = DocEntry
-                    oStockTransfer.Lines.BaseType = 5
-                    oStockTransfer.Lines.BaseLine = LineNum
+                    'oStockTransfer.Lines.BaseEntry = DocEntry
+                    'oStockTransfer.Lines.BaseType = 5
+                    'oStockTransfer.Lines.BaseLine = LineNum
                     oStockTransfer.Lines.ItemCode = ItemCode
                     oStockTransfer.Lines.FromWarehouseCode = FromWhsCod
                     oStockTransfer.Lines.WarehouseCode = WhsCode
@@ -100,7 +103,7 @@
 
                                     oStockTransfer.Lines.BatchNumbers.BatchNumber = BatchNumber
                                     oStockTransfer.Lines.BatchNumbers.Quantity = CantidadL
-                                    oStockTransfer.Lines.BatchNumbers.BaseLineNumber = LineNum
+                                    'oStockTransfer.Lines.BatchNumbers.BaseLineNumber = LineNum
 
                                     oStockTransfer.Lines.BatchNumbers.Add()
 
@@ -112,7 +115,7 @@
 
                                     oStockTransfer.Lines.BatchNumbers.BatchNumber = BatchNumber
                                     oStockTransfer.Lines.BatchNumbers.Quantity = CantidadR
-                                    oStockTransfer.Lines.BatchNumbers.BaseLineNumber = LineNum
+                                    'oStockTransfer.Lines.BatchNumbers.BaseLineNumber = LineNum
 
                                     oStockTransfer.Lines.BatchNumbers.Add()
 
@@ -147,6 +150,15 @@
                     If oRecSetH3.RecordCount = 1 Then
 
                         DocNumST = oRecSetH3.Fields.Item("DocNum").Value
+
+                        oStockTransfer = cSBOCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oInventoryTransferRequest)
+
+                        oStockTransfer.GetByKey(DocEntry)
+                        oStockTransfer.Comments = "Cerrado por el traslado " & DocNumST
+                        oStockTransfer.Update()
+
+                        oStockTransfer.Close()
+
                         oED = New FrmtekEDocument
                         oED.openForm(csDirectory, AOWTR)
 
