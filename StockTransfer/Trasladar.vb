@@ -1,25 +1,45 @@
-﻿Public Class Trasladar
+﻿Imports System.Windows.Forms
+
+Public Class Trasladar
 
 
     Private cSBOApplication As SAPbouiCOM.Application '//OBJETO DE APLICACION
     Private cSBOCompany As SAPbobsCOM.Company     '//OBJETO DE CONEXION
-    Private coForm As SAPbouiCOM.Form           '//FORMA
-    Private csFormUID As String
-    Private stDocNum As String
-    Friend Monto As Double
-    Dim ContOBNK, AORIN As Integer
-
+    Dim conexionSQL As Sap.Data.Hana.HanaConnection
 
     '//----- METODO DE CREACION DE LA CLASE
     Public Sub New()
         MyBase.New()
         cSBOApplication = oCatchingEvents.SBOApplication
         cSBOCompany = oCatchingEvents.SBOCompany
-        Me.stDocNum = stDocNum
+        conectar()
     End Sub
 
+    Public Function conectar() As Boolean
+        Dim stCadenaConexion As String
+        Try
 
-    Public Function AddTransfer(ByVal csDirectory As String, ByVal DocNum As String)
+            conectar = False
+
+            ''---- Cargamos datos de archivo de configuracion
+
+            '---- objeto compañia
+            conexionSQL = New Sap.Data.Hana.HanaConnection
+
+            '---- armamos cadena de conexion
+            stCadenaConexion = "DRIVER={B1CRHPROXY32};UID=" & My.Settings.UserSQL & ";PWD=" & My.Settings.PassSQL & ";SERVERNODE=" & My.Settings.Server
+
+            '---- realizamos conexion
+            conexionSQL = New Sap.Data.Hana.HanaConnection(stCadenaConexion)
+
+            conexionSQL.Open()
+
+        Catch ex As Exception
+            cSBOApplication.MessageBox("Error al conectar con HANA . " & ex.Message)
+        End Try
+    End Function
+
+    Public Function AddTransfer(ByVal csDirectory As String, ByVal DocNum As String, ByVal FormUID As String)
 
         Dim DocEntry, ObjType, LineNum, ItemCode, VisOrder, FromWhsCod, WhsCode, BatchNumber, DocNumST, Lote As String
         Dim Quantity As Double
@@ -31,6 +51,10 @@
         Dim lsError As String
         Dim AOWTR As Integer
         Dim oED As FrmtekEDocument
+        Dim tabla As DataTable
+        Dim comm As New Sap.Data.Hana.HanaCommand
+        Dim DA As New Sap.Data.Hana.HanaDataAdapter
+        Dim ds As New DataSet
 
         oRecSetH1 = cSBOCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset)
         oRecSetH2 = cSBOCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset)
@@ -40,12 +64,17 @@
 
         Try
 
-            stQueryH1 = "Select T1.""DocEntry"",T0.""ObjType"",T1.""LineNum"",T1.""ItemCode"",T1.""VisOrder"",T1.""FromWhsCod"",T1.""WhsCode"",T1.""Quantity"",T2.""ManBtchNum"" from OWTQ T0 Inner Join WTQ1 T1 on T1.""DocEntry""=T0.""DocEntry"" Inner Join OITM T2 on T2.""ItemCode""=T1.""ItemCode"" where T0.""DocNum""=" & DocNum
+            stQueryH1 = "Select T1.""DocEntry"",T0.""ObjType"",T1.""LineNum"",T1.""ItemCode"",T1.""VisOrder"",T1.""FromWhsCod"",T1.""WhsCode"",T1.""Quantity"",T2.""ManBtchNum"" from """ & cSBOCompany.CompanyDB & """.OWTQ T0 Inner Join """ & cSBOCompany.CompanyDB & """.WTQ1 T1 on T1.""DocEntry""=T0.""DocEntry"" Inner Join """ & cSBOCompany.CompanyDB & """.OITM T2 on T2.""ItemCode""=T1.""ItemCode"" where T0.""DocNum""=" & DocNum
             oRecSetH1.DoQuery(stQueryH1)
+            comm.CommandText = stQueryH1
+            comm.Connection = conexionSQL
+            DA.SelectCommand = comm
+            DA.Fill(ds)
 
-            If oRecSetH1.RecordCount > 0 Then
 
-                oRecSetH1.MoveFirst()
+            If ds.Tables(0).Rows.Count > 0 Then
+
+                tabla = ds.Tables(0)
 
                 oStockTransfer.DocDate = DateTime.Now
                 oStockTransfer.FromWarehouse = oRecSetH1.Fields.Item("FromWhsCod").Value
@@ -54,7 +83,11 @@
                 oStockTransfer.ElectronicProtocols.GenerationType = 1
                 oStockTransfer.ElectronicProtocols.Add()
 
-                For i = 0 To oRecSetH1.RecordCount - 1
+                oRecSetH1.MoveFirst()
+
+                For Each i As DataRow In tabla.Rows
+                    'Each i As DataRow In tabla.Rows '11 seg
+                    'i = 0 To oRecSetH1.RecordCount - 1 '9, 10, 11
 
                     DocEntry = oRecSetH1.Fields.Item("DocEntry").Value
                     ObjType = oRecSetH1.Fields.Item("ObjType").Value
@@ -161,6 +194,8 @@
 
                         oED = New FrmtekEDocument
                         oED.openForm(csDirectory, AOWTR)
+
+                        conexionSQL.Close()
 
                     End If
 

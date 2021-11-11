@@ -168,7 +168,7 @@
                                 DocNum = oDatatable.GetValue("DocNum", 0)
 
                                 oOWTR = New Trasladar
-                                oOWTR.AddTransfer(csDirectory, DocNum)
+                                oOWTR.AddTransfer(csDirectory, DocNum, FormUID)
 
                             End If
 
