@@ -122,15 +122,15 @@ Public Class Trasladar
                         If oRecSetH2.RecordCount > 0 Then
 
                             oRecSetH2.MoveFirst()
-                            CantidadR = Quantity
+                            CantidadR = Format(Quantity, "0.000")
 
                             For l = 0 To oRecSetH2.RecordCount - 1
 
-                                CantidadL = oRecSetH2.Fields.Item("CantidadLote").Value
+                                CantidadL = Format(oRecSetH2.Fields.Item("CantidadLote").Value, "0.000")
 
                                 If CantidadR > CantidadL Then
 
-                                    CantidadR = CantidadR - CantidadL
+                                    CantidadR = Format(CantidadR - CantidadL, "0.000")
 
                                     BatchNumber = oRecSetH2.Fields.Item("BatchNum").Value
 
