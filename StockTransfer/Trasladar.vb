@@ -173,6 +173,7 @@ Public Class Trasladar
 
                     cSBOCompany.GetLastError(llError, lsError)
                     Err.Raise(-1, 1, lsError)
+                    conexionSQL.Close()
 
                 Else
 
@@ -206,6 +207,7 @@ Public Class Trasladar
         Catch ex As Exception
 
             cSBOApplication.MessageBox("Error al crear el traslado. " & ex.Message)
+            conexionSQL.Close()
 
         End Try
 
