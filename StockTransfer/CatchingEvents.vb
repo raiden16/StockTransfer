@@ -138,8 +138,12 @@
         Dim coForm As SAPbouiCOM.Form
         Dim stTabla As String
         Dim oDatatable As SAPbouiCOM.DBDataSource
-        Dim DocNum As String
+        Dim DocNum, Transfer As String
         Dim Respuesta As Integer
+        Dim stQueryH1 As String
+        Dim oRecSetH1 As SAPbobsCOM.Recordset
+
+        oRecSetH1 = SBOCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset)
 
         Try
 
@@ -167,8 +171,20 @@
                                 oDatatable = coForm.DataSources.DBDataSources.Item(stTabla)
                                 DocNum = oDatatable.GetValue("DocNum", 0)
 
-                                oOWTR = New Trasladar
-                                oOWTR.AddTransfer(csDirectory, DocNum, FormUID)
+                                stQueryH1 = "Select ""DocNum"" from OWTR where ""Comments"" like '%" & DocNum & "%'"
+                                oRecSetH1.DoQuery(stQueryH1)
+
+                                If oRecSetH1.RecordCount = 0 Then
+
+                                    oOWTR = New Trasladar
+                                    oOWTR.AddTransfer(csDirectory, DocNum, FormUID)
+
+                                Else
+
+                                    Transfer = oRecSetH1.Fields.Item("DocNum").Value.ToString
+                                    SBOApplication.MessageBox("La solicitud ya cuenta con un traslado, el traslado es:" & Transfer)
+
+                                End If
 
                             End If
 

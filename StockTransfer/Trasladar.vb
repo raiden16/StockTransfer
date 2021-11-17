@@ -41,7 +41,7 @@ Public Class Trasladar
 
     Public Function AddTransfer(ByVal csDirectory As String, ByVal DocNum As String, ByVal FormUID As String)
 
-        Dim DocEntry, ObjType, LineNum, ItemCode, VisOrder, FromWhsCod, WhsCode, BatchNumber, DocNumST, Lote, Boxes, Delivery As String
+        Dim DocEntry, ObjType, LineNum, ItemCode, VisOrder, FromWhsCod, WhsCode, BatchNumber, DocNumST, Lote, Boxes, Delivery, Package As String
         Dim Quantity As Double
         Dim stQueryH1, stQueryH2, stQueryH3 As String
         Dim oRecSetH1, oRecSetH2, oRecSetH3 As SAPbobsCOM.Recordset
@@ -64,7 +64,7 @@ Public Class Trasladar
 
         Try
 
-            stQueryH1 = "Select T1.""DocEntry"",T0.""ObjType"",T1.""LineNum"",T1.""ItemCode"",T1.""VisOrder"",T1.""FromWhsCod"",T1.""WhsCode"",T1.""Quantity"",T1.""U_CajasReq"",T1.""U_DeliveryType"",T2.""ManBtchNum"" from """ & cSBOCompany.CompanyDB & """.OWTQ T0 Inner Join """ & cSBOCompany.CompanyDB & """.WTQ1 T1 on T1.""DocEntry""=T0.""DocEntry"" Inner Join """ & cSBOCompany.CompanyDB & """.OITM T2 on T2.""ItemCode""=T1.""ItemCode"" where T0.""DocNum""=" & DocNum
+            stQueryH1 = "Select T1.""DocEntry"",T0.""ObjType"",T1.""LineNum"",T1.""ItemCode"",T1.""VisOrder"",T1.""FromWhsCod"",T1.""WhsCode"",T1.""Quantity"",T1.""U_CajasReq"",T1.""U_DeliveryType"",T1.""U_NumPaq"",T2.""ManBtchNum"" from """ & cSBOCompany.CompanyDB & """.OWTQ T0 Inner Join """ & cSBOCompany.CompanyDB & """.WTQ1 T1 on T1.""DocEntry""=T0.""DocEntry"" Inner Join """ & cSBOCompany.CompanyDB & """.OITM T2 on T2.""ItemCode""=T1.""ItemCode"" where T0.""DocNum""=" & DocNum
             oRecSetH1.DoQuery(stQueryH1)
             comm.CommandText = stQueryH1
             comm.Connection = conexionSQL
@@ -100,6 +100,7 @@ Public Class Trasladar
                     Lote = oRecSetH1.Fields.Item("ManBtchNum").Value
                     Boxes = oRecSetH1.Fields.Item("U_CajasReq").Value
                     Delivery = oRecSetH1.Fields.Item("U_DeliveryType").Value
+                    Package = oRecSetH1.Fields.Item("U_NumPaq").Value
 
                     'oStockTransfer.Lines.BaseEntry = DocEntry
                     'oStockTransfer.Lines.BaseType = 5
@@ -110,6 +111,7 @@ Public Class Trasladar
                     oStockTransfer.Lines.Quantity = Quantity
                     oStockTransfer.Lines.UserFields.Fields.Item("U_CajasReq").Value = Boxes
                     oStockTransfer.Lines.UserFields.Fields.Item("U_DeliveryType").Value = Delivery
+                    oStockTransfer.Lines.UserFields.Fields.Item("U_NumPaq").Value = Package
 
                     If Lote = "Y" Then
 
