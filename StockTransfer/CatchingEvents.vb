@@ -171,7 +171,7 @@
                                 oDatatable = coForm.DataSources.DBDataSources.Item(stTabla)
                                 DocNum = oDatatable.GetValue("DocNum", 0)
 
-                                stQueryH1 = "Select ""DocNum"" from OWTR where ""Comments"" like '%" & DocNum & "%'"
+                                stQueryH1 = "Select ""DocNum"" from OWTR where ""Comments"" like '%Basado en la solicitud " & DocNum & "%'"
                                 oRecSetH1.DoQuery(stQueryH1)
 
                                 If oRecSetH1.RecordCount = 0 Then
@@ -182,7 +182,7 @@
                                 Else
 
                                     Transfer = oRecSetH1.Fields.Item("DocNum").Value.ToString
-                                    SBOApplication.MessageBox("La solicitud ya cuenta con un traslado, el traslado es:" & Transfer)
+                                    SBOApplication.MessageBox("La solicitud ya cuenta con un traslado, el traslado es: " & Transfer)
 
                                 End If
 
