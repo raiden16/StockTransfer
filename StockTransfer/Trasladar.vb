@@ -83,6 +83,10 @@ Public Class Trasladar
                 oStockTransfer.ElectronicProtocols.GenerationType = 1
                 oStockTransfer.ElectronicProtocols.Add()
 
+                CreateTemporalTable()
+
+                InsertTemporalTable(DocNum)
+
                 oRecSetH1.MoveFirst()
 
                 For Each i As DataRow In tabla.Rows
@@ -115,14 +119,15 @@ Public Class Trasladar
 
                     If Lote = "Y" Then
 
-                        stQueryH2 = "Select T0.*,T1.""CreateDate"" from
-                                                    (Select ""BatchNum"",""ItemCode"",""WhsCode"",
-                                                    sum(case when ""Direction""=0 then ""Quantity"" else -1*""Quantity"" end) as ""CantidadLote"" 
-                                                    from IBT1 where ""ItemCode""='" & ItemCode & "' AND ""WhsCode""='" & FromWhsCod & "'
-                                                    Group by  ""BatchNum"",""ItemCode"",""WhsCode"") T0
-                                                    Inner Join OBTN T1 on T1.""DistNumber""=T0.""BatchNum"" and T1.""ItemCode""=T0.""ItemCode""
-                                                    where T0.""CantidadLote"">0
-                                                    order by T1.""CreateDate"""
+                        'stQueryH2 = "Select T0.*,T1.""CreateDate"" from
+                        '                            (Select ""BatchNum"",""ItemCode"",""WhsCode"",
+                        '                            sum(case when ""Direction""=0 then ""Quantity"" else -1*""Quantity"" end) as ""CantidadLote"" 
+                        '                            from IBT1 where ""ItemCode""='" & ItemCode & "' AND ""WhsCode""='" & FromWhsCod & "'
+                        '                            Group by  ""BatchNum"",""ItemCode"",""WhsCode"") T0
+                        '                            Inner Join OBTN T1 on T1.""DistNumber""=T0.""BatchNum"" and T1.""ItemCode""=T0.""ItemCode""
+                        '                            where T0.""CantidadLote"">0
+                        '                            order by T1.""CreateDate"""
+                        stQueryH2 = "Select * from """ & cSBOCompany.CompanyDB & """.ListaLotes where ""ITEMCODE""='" & ItemCode & "' and ""CANTIDADLOTE"">0 order by ""CREATEDATE"" Desc"
                         oRecSetH2.DoQuery(stQueryH2)
 
                         If oRecSetH2.RecordCount > 0 Then
@@ -132,7 +137,7 @@ Public Class Trasladar
 
                             For l = 0 To oRecSetH2.RecordCount - 1
 
-                                CantidadL = Format(oRecSetH2.Fields.Item("CantidadLote").Value, "0.000")
+                                CantidadL = Format(oRecSetH2.Fields.Item("CANTIDADLOTE").Value, "0.000")
 
                                 If CantidadR > CantidadL Then
 
@@ -146,6 +151,8 @@ Public Class Trasladar
 
                                     oStockTransfer.Lines.BatchNumbers.Add()
 
+                                    UpdateTemporalTable(BatchNumber, CantidadL - CantidadL)
+
                                     l = 0
 
                                 Else
@@ -157,6 +164,8 @@ Public Class Trasladar
                                     'oStockTransfer.Lines.BatchNumbers.BaseLineNumber = LineNum
 
                                     oStockTransfer.Lines.BatchNumbers.Add()
+
+                                    UpdateTemporalTable(BatchNumber, CantidadL - CantidadR)
 
                                     l = oRecSetH2.RecordCount - 1
 
@@ -182,6 +191,8 @@ Public Class Trasladar
                     conexionSQL.Close()
 
                 Else
+
+                    DropTemporalTable()
 
                     AOWTR = cSBOCompany.GetNewObjectKey().ToString()
                     stQueryH3 = "Select ""DocNum"" from OWTR where ""DocEntry""=" & AOWTR
@@ -213,6 +224,133 @@ Public Class Trasladar
         Catch ex As Exception
 
             cSBOApplication.MessageBox("Error al crear el traslado. " & ex.Message)
+            conexionSQL.Close()
+            DropTemporalTable()
+
+        End Try
+
+    End Function
+
+
+    Public Function CreateTemporalTable()
+
+        Dim stQueryH1 As String
+        Dim comm As New Sap.Data.Hana.HanaCommand
+        Dim DA As New Sap.Data.Hana.HanaDataAdapter
+        Dim ds As New DataSet
+
+        Try
+
+            stQueryH1 = "CREATE COLUMN TABLE """ & cSBOCompany.CompanyDB & """.ListaLotes (BatchNum NVARCHAR(50), ItemCode NVARCHAR(50), WhsCode NVARCHAR(5), CantidadLote Double, CreateDate NVARCHAR(20));"
+            comm.CommandText = stQueryH1
+            comm.Connection = conexionSQL
+            DA.SelectCommand = comm
+            DA.Fill(ds)
+
+        Catch ex As Exception
+
+            cSBOApplication.MessageBox("Error al CreateTemporalTable. " & ex.Message)
+            conexionSQL.Close()
+
+        End Try
+
+    End Function
+
+
+    Public Function InsertTemporalTable(ByVal DocNum As String)
+
+        Dim stQueryH1, stQueryH2 As String
+        Dim comm, comm2 As New Sap.Data.Hana.HanaCommand
+        Dim DA, DA2 As New Sap.Data.Hana.HanaDataAdapter
+        Dim ds, ds2 As New DataSet
+        Dim tabla As DataTable
+        Dim BatchNum, ItemCode, WhsCode As String
+        Dim CantidadLote As Double
+        Dim CreateDate As String
+
+        Try
+
+            stQueryH1 = "Call """ & cSBOCompany.CompanyDB & """.Lotes(" & DocNum & ")"
+            comm.CommandText = stQueryH1
+            comm.Connection = conexionSQL
+            DA.SelectCommand = comm
+            DA.Fill(ds)
+
+            If ds.Tables(0).Rows.Count > 0 Then
+
+                tabla = ds.Tables(0)
+
+                For i = 0 To ds.Tables(0).Rows.Count - 1
+
+                    BatchNum = ds.Tables(0).Rows(i).Item("BatchNum")
+                    ItemCode = ds.Tables(0).Rows(i).Item("ItemCode")
+                    WhsCode = ds.Tables(0).Rows(i).Item("WhsCode")
+                    CantidadLote = ds.Tables(0).Rows(i).Item("CantidadLote")
+                    CreateDate = ds.Tables(0).Rows(i).Item("CreateDate")
+
+                    stQueryH2 = "Insert Into """ & cSBOCompany.CompanyDB & """.ListaLotes values ('" & BatchNum & "','" & ItemCode & "','" & WhsCode & "'," & CantidadLote & ",'" & CreateDate & "')"
+                    comm2.CommandText = stQueryH2
+                    comm2.Connection = conexionSQL
+                    DA2.SelectCommand = comm2
+                    DA2.Fill(ds2)
+
+                Next
+
+            End If
+
+        Catch ex As Exception
+
+            cSBOApplication.MessageBox("Error al InsertTemporalTable. " & ex.Message)
+            conexionSQL.Close()
+
+        End Try
+
+    End Function
+
+
+    Public Function UpdateTemporalTable(ByVal Lote As String, ByVal Cantidad As Double)
+
+        Dim stQueryH1 As String
+        Dim comm As New Sap.Data.Hana.HanaCommand
+        Dim DA As New Sap.Data.Hana.HanaDataAdapter
+        Dim ds As New DataSet
+
+        Try
+
+            stQueryH1 = "Update """ & cSBOCompany.CompanyDB & """.ListaLotes set ""CANTIDADLOTE""=" & Cantidad & " where ""BATCHNUM""='" & Lote & "'"
+            comm.CommandText = stQueryH1
+            comm.Connection = conexionSQL
+            DA.SelectCommand = comm
+            DA.Fill(ds)
+
+        Catch ex As Exception
+
+            cSBOApplication.MessageBox("Error al UpdateTemporalTable. " & ex.Message)
+            conexionSQL.Close()
+
+        End Try
+
+    End Function
+
+
+    Public Function DropTemporalTable()
+
+        Dim stQueryH1 As String
+        Dim comm As New Sap.Data.Hana.HanaCommand
+        Dim DA As New Sap.Data.Hana.HanaDataAdapter
+        Dim ds As New DataSet
+
+        Try
+
+            stQueryH1 = "Drop table """ & cSBOCompany.CompanyDB & """.ListaLotes"
+            comm.CommandText = stQueryH1
+            comm.Connection = conexionSQL
+            DA.SelectCommand = comm
+            DA.Fill(ds)
+
+        Catch ex As Exception
+
+            cSBOApplication.MessageBox("Error al DropTemporalTable. " & ex.Message)
             conexionSQL.Close()
 
         End Try
