@@ -151,7 +151,7 @@ Public Class Trasladar
 
                                     oStockTransfer.Lines.BatchNumbers.Add()
 
-                                    UpdateTemporalTable(BatchNumber, CantidadL - CantidadL)
+                                    UpdateTemporalTable(BatchNumber, ItemCode, CantidadL - CantidadL)
 
                                     l = 0
 
@@ -165,7 +165,7 @@ Public Class Trasladar
 
                                     oStockTransfer.Lines.BatchNumbers.Add()
 
-                                    UpdateTemporalTable(BatchNumber, CantidadL - CantidadR)
+                                    UpdateTemporalTable(BatchNumber, ItemCode, CantidadL - CantidadR)
 
                                     l = oRecSetH2.RecordCount - 1
 
@@ -308,7 +308,7 @@ Public Class Trasladar
     End Function
 
 
-    Public Function UpdateTemporalTable(ByVal Lote As String, ByVal Cantidad As Double)
+    Public Function UpdateTemporalTable(ByVal Lote As String, ByVal ItemCode As String, ByVal Cantidad As Double)
 
         Dim stQueryH1 As String
         Dim comm As New Sap.Data.Hana.HanaCommand
@@ -317,7 +317,7 @@ Public Class Trasladar
 
         Try
 
-            stQueryH1 = "Update """ & cSBOCompany.CompanyDB & """.ListaLotes set ""CANTIDADLOTE""=" & Cantidad & " where ""BATCHNUM""='" & Lote & "'"
+            stQueryH1 = "Update """ & cSBOCompany.CompanyDB & """.ListaLotes set ""CANTIDADLOTE""=" & Cantidad & " where ""BATCHNUM""='" & Lote & "' and ""ITEMCODE""='" & ItemCode & "'"
             comm.CommandText = stQueryH1
             comm.Connection = conexionSQL
             DA.SelectCommand = comm
